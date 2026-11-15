@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lunar Landing Site Intelligence Platform | NASA & CSA Integrated</title>
+    
+    <!-- Leaflet for Lunar Cartography -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Chart.js for Scientific Visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Custom Mission Control Styles -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Top Mission Navigation Bar -->
+    <header class="top-nav">
+        <div class="nav-brand">
+            <img src="/llie-logo.png" alt="LLIE Logo" style="height: 36px; width: 36px; border-radius: 6px; object-fit: contain;">
+            <div>
+                <div class="nav-title">LUNAR LANDING SITE INTELLIGENCE</div>
+                <div class="nav-subtitle">Solar • Earth Visibility • DSN Comms • Terrain Shadow • MCDA Scoring • SQLite</div>
+            </div>
+        </div>
+        
+        <div class="api-status-bar">
+            <a href="/react" target="_blank" class="status-pill active" style="background:#1e1b4b; border-color:#6366f1; color:#c7d2fe;" title="Open Lunar Command React Explorer">
+                <span class="dot" style="background:#818cf8; box-shadow:0 0 6px #818cf8;"></span> 🚀 Lunar Command (React) ↗
+            </a>
+            <a href="https://quickmap.lroc.asu.edu/" target="_blank" class="status-pill active" title="LROC QuickMap ASU Portal">
+                <span class="dot"></span> LROC QuickMap
+            </a>
+            <a href="https://trek.nasa.gov/moon/" target="_blank" class="status-pill active" title="NASA Moon Trek WMTS Tile Integration">
+                <span class="dot"></span> NASA Moon Trek
+            </a>
+            <a href="https://ssd.jpl.nasa.gov/horizons/" target="_blank" class="status-pill active" title="NASA JPL Horizons Ephemeris API">
+                <span class="dot"></span> JPL Horizons
+            </a>
+            <a href="https://www.asc-csa.gc.ca/eng/astronomy/moon-exploration/" target="_blank" class="status-pill active" title="Canadian Space Agency Moon Exploration">
+                <span class="dot"></span> ASC-CSA Rover
+            </a>
+        </div>
+    </header>
+
+    <!-- Primary Workspace Container -->
+    <div class="app-layout">
+        <!-- Sidebar: Target Site & Mission Window Selector -->
+        <aside class="sidebar">
+            <div class="panel-section">
+                <h3>🎯 Mission Parameters</h3>
+                <div class="form-group">
+                    <label for="site-select">Candidate Landing Site</label>
+                    <select id="site-select" class="control-input">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <div class="site-quick-info" id="site-quick-info">
+                    <div class="info-row"><span class="label">Region:</span> <span id="info-region">-</span></div>
+                    <div class="info-row"><span class="label">Coordinates:</span> <span id="info-coords">-</span></div>
+                    <div class="info-row"><span class="label">Elevation (LOLA):</span> <span id="info-elev">-</span></div>
+                    <div class="info-row"><span class="label">Mean Slope:</span> <span id="info-slope">-</span></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="start-utc">Start UTC Epoch</label>
+                    <input type="datetime-local" id="start-utc" class="control-input" value="2026-12-01T00:00">
+                </div>
+
+                <div class="form-group">
+                    <label for="end-utc">End UTC Epoch (Window)</label>
+                    <input type="datetime-local" id="end-utc" class="control-input" value="2026-12-08T00:00">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="step-select">Time Step</label>
+                        <select id="step-select" class="control-input">
+                            <option value="1800">30 mins</option>
+                            <option value="3600" selected>1 hour</option>
+                            <option value="7200">2 hours</option>
+                            <option value="14400">4 hours</option>
+                        </select>
+                    </div>
+                    <div class="form-group half">
+                        <label for="mast-height">Mast Height (m)</label>
+                        <input type="number" id="mast-height" class="control-input" value="2.0" step="0.5" min="0" max="10">
+                    </div>
+                </div>
+
+                <button id="btn-run-sim" class="btn btn-primary full-width">
+                    <span class="icon">🚀</span> Run Site Intelligence
+                </button>
+            </div>
+
+            <div class="panel-section">
+                <h3>🗺️ Direct Portal Deep-Links</h3>
+                <div class="link-grid">
+                    <a id="link-quickmap" href="https://quickmap.lroc.asu.edu/" target="_blank" class="portal-btn qm">
+                        <span>LROC QuickMap ↗</span>
+                    </a>
+                    <a id="link-moontrek" href="https://trek.nasa.gov/moon/" target="_blank" class="portal-btn mt">
+                        <span>NASA Moon Trek ↗</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <h3>📁 Export Mission Data</h3>
+                <div class="btn-stack">
+                    <a href="/lunar_landing_intelligence_document.docx" download="lunar_landing_intelligence_document.docx" class="btn btn-primary full-width" style="text-decoration:none;">📄 Download Complete DOCX Document</a>
+                    <a href="/lunar_landing_intelligence_full_project.zip" download="lunar_landing_intelligence_full_project.zip" class="btn btn-secondary full-width" style="text-decoration:none;">📦 Download Full Source ZIP</a>
+                    <button id="btn-export-dossier" class="btn btn-secondary full-width">📑 Printable HTML Dossier</button>
+                    <button id="btn-export-csv" class="btn btn-secondary full-width">📊 Download Simulation CSV</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area with Tabbed Panels -->
+        <main class="main-content">
+            <!-- Navigation Tabs -->
+            <nav class="nav-tabs">
+                <button class="tab-btn active" data-tab="tab-map">🗺️ Interactive Map & Sites</button>
+                <button class="tab-btn" data-tab="tab-dynamics">☀️ Solar & Earth Dynamics</button>
+                <button class="tab-btn" data-tab="tab-horizon">🧭 360° Sky & Horizon Profile</button>
+                <button class="tab-btn" data-tab="tab-comms">📡 DSN & RF Link Budget</button>
+                <button class="tab-btn" data-tab="tab-mcda">📊 MCDA Landing Ranking</button>
+                <button class="tab-btn" data-tab="tab-csa">🍁 CSA Exploration (Canada)</button>
+                <button class="tab-btn" data-tab="tab-horizons">🛰️ JPL Horizons Live Verify</button>
+                <button class="tab-btn" data-tab="tab-saved-sites">💾 Saved Sites (SQLite)</button>
+            </nav>
+
+            <!-- TAB 1: INTERACTIVE MAP -->
+            <section id="tab-map" class="tab-panel active">
+                <div class="panel-header">
+                    <h2>Lunar Surface Cartography & Candidate Sites</h2>
+                    <span class="header-note">NASA Moon Trek WAC Global Mosaic & LOLA Altimetry (Click anywhere on Moon to inspect)</span>
+                </div>
+                
+                <div class="map-controls-bar">
+                    <span class="control-label">Quick Zoom Focus:</span>
+                    <button class="pill-btn active" data-focus="south-pole">South Pole (Artemis / CSA)</button>
+                    <button class="pill-btn" data-focus="equatorial">Near-side Equatorial (Apollo)</button>
+                    <button class="pill-btn" data-focus="global">Global View</button>
+                    <span style="flex-grow: 1;"></span>
+                    <span class="cursor-coords" id="cursor-coords">Lat: -89.6000°, Lon: 129.8000°</span>
+                </div>
+
+                <div id="lunar-map" class="lunar-map-container"></div>
+
+                <div class="map-footer-grid">
+                    <div class="stat-card">
+                        <span class="card-title">Selected Coordinates</span>
+                        <span class="card-val" id="selected-coords">-89.6000°, 129.8000°</span>
+                        <span class="card-sub">LOLA Datum Elevation: <strong id="selected-elev">2150 m</strong></span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="card-title">Sunlight Availability</span>
+                        <span class="card-val highlight-green" id="card-sunlight">-</span>
+                        <span class="card-sub" id="card-sunlight-sub">Over mission window</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="card-title">Direct-to-Earth LOS</span>
+                        <span class="card-val highlight-blue" id="card-earth">-</span>
+                        <span class="card-sub" id="card-earth-sub">Libration and horizon adjusted</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="card-title">Touchdown Windows</span>
+                        <span class="card-val highlight-gold" id="card-windows">-</span>
+                        <span class="card-sub" id="card-windows-sub">Sun 5°–20° + DSN contact</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: SOLAR & EARTH DYNAMICS -->
+            <section id="tab-dynamics" class="tab-panel">
+                <div class="panel-header">
+                    <h2>Solar and Earth Visibility Dynamics</h2>
+                    <span class="header-note">Time-series tracking of topocentric elevations, disc illumination, and incident solar flux</span>
+                </div>
+
+                <div class="chart-container large">
+                    <canvas id="chart-elevations"></canvas>
+                </div>
+
+                <div class="dynamics-grid">
+                    <div class="chart-container medium">
+                        <canvas id="chart-flux"></canvas>
+                    </div>
+                    <div class="touchdown-box">
+                        <h3>Optimal Touchdown Windows (Sun 5°–20°, Earth &ge; 5°, DSN Contact)</h3>
+                        <div class="table-scroll">
+                            <table id="windows-table" class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Window Start (UTC)</th>
+                                        <th>Window End (UTC)</th>
+                                        <th>Duration</th>
+                                        <th>Avg Sun El</th>
+                                        <th>Avg Earth El</th>
+                                        <th>DSN Stations</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: 360° SKY & HORIZON PROFILE -->
+            <section id="tab-horizon" class="tab-panel">
+                <div class="panel-header">
+                    <h2>360-Degree Topocentric Horizon Mask & Sky Plot</h2>
+                    <span class="header-note">Crater rim elevation obstruction angles vs. Sun and Earth trajectories</span>
+                </div>
+
+                <div class="horizon-layout">
+                    <div class="chart-container square">
+                        <canvas id="chart-polar-horizon"></canvas>
+                    </div>
+                    <div class="horizon-details">
+                        <h3>Topographic Obstruction Metrics</h3>
+                        <p>Computed from high-resolution LOLA digital elevation model (DEM) and SLDEM2015 synthesis. Celestial targets below the horizon profile line are occluded by local crater walls or distant massifs.</p>
+                        
+                        <div class="metric-list">
+                            <div class="metric-item">
+                                <span class="label">Peak Terrain Obstruction Angle:</span>
+                                <span class="val" id="mask-peak-el">6.8°</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="label">Minimum Horizon Angle:</span>
+                                <span class="val" id="mask-min-el">1.8°</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="label">Mean Horizon Obstruction:</span>
+                                <span class="val" id="mask-mean-el">3.4°</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="label">Sun Penumbra Disk Model:</span>
+                                <span class="val">0.267° semi-diameter (Finite Disk)</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="label">Antenna Mast Advantage:</span>
+                                <span class="val" id="mask-dip-el">0.087° (~5.2 arcmin at 2m)</span>
+                            </div>
+                        </div>
+
+                        <div class="tip-box">
+                            <strong>💡 Polar Grazing Geometry Note:</strong> At polar latitudes (&gt;85°S), the Sun's elevation relative to the local flat horizontal plane stays within roughly &plusmn;1.54° of zero. Therefore, a crater rim rising only 3° to 5° high produces long permanent shadows or periodic solar eclipses.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: DSN & RF LINK BUDGET -->
+            <section id="tab-comms" class="tab-panel">
+                <div class="panel-header">
+                    <h2>Deep Space Network (DSN) Tracking & Direct-to-Earth Link Budget</h2>
+                    <span class="header-note">24/7 Ground station handover simulation and S/X/Ka-band RF budget calculator</span>
+                </div>
+
+                <div class="dsn-status-card">
+                    <h3>Deep Space Network 3-Station Coverage</h3>
+                    <div class="dsn-stations-grid">
+                        <div class="dsn-station-badge" id="dsn-goldstone">
+                            <div class="station-icon">📡</div>
+                            <div class="station-name">Goldstone (GDSCC)</div>
+                            <div class="station-coords">California, USA (35.4°N, 116.9°W)</div>
+                            <div class="station-el" id="el-goldstone">Tracking Elevation: --</div>
+                        </div>
+                        <div class="dsn-station-badge" id="dsn-madrid">
+                            <div class="station-icon">📡</div>
+                            <div class="station-name">Madrid (MDSCC)</div>
+                            <div class="station-coords">Robledo, Spain (40.4°N, 4.3°W)</div>
+                            <div class="station-el" id="el-madrid">Tracking Elevation: --</div>
+                        </div>
+                        <div class="dsn-station-badge" id="dsn-canberra">
+                            <div class="station-icon">📡</div>
+                            <div class="station-name">Canberra (CDSCC)</div>
+                            <div class="station-coords">Tidbinbilla, Australia (35.4°S, 149.0°E)</div>
+                            <div class="station-el" id="el-canberra">Tracking Elevation: --</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="link-budget-section">
+                    <h3>Interactive RF Downlink Budget Calculator</h3>
+                    <div class="budget-grid">
+                        <div class="budget-inputs">
+                            <div class="form-group">
+                                <label for="rf-band">Frequency Band</label>
+                                <select id="rf-band" class="control-input">
+                                    <option value="X-Band" selected>X-Band (8.45 GHz Deep Space Science)</option>
+                                    <option value="S-Band">S-Band (2.25 GHz Space Operations)</option>
+                                    <option value="Ka-Band">Ka-Band (32.05 GHz High Data Rate)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="tx-power">Lander RF Power: <span id="tx-power-val">15</span> W</label>
+                                <input type="range" id="tx-power" min="1" max="100" value="15" class="slider">
+                            </div>
+                            <div class="form-group">
+                                <label for="dish-diam">Lander Dish Diameter: <span id="dish-diam-val">0.5</span> m</label>
+                                <input type="range" id="dish-diam" min="0.1" max="2.0" step="0.1" value="0.5" class="slider">
+                            </div>
+                            <div class="form-group">
+                                <label for="dsn-dish">DSN Ground Station Antenna</label>
+                                <select id="dsn-dish" class="control-input">
+                                    <option value="34m BWG" selected>34-metre Beam Waveguide (BWG)</option>
+                                    <option value="70m">70-metre Deep Space Dish</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="target-rate">Target Science Data Rate (kbps)</label>
+                                <input type="number" id="target-rate" class="control-input" value="256" min="1" max="50000">
+                            </div>
+                        </div>
+
+                        <div class="budget-results">
+                            <div class="result-box" id="budget-status-box">
+                                <div class="result-status" id="budget-margin-status">LINK CLOSED (POSITIVE MARGIN)</div>
+                                <div class="result-main-val" id="budget-margin-db">+8.4 dB Margin</div>
+                                <div class="result-sub" id="budget-max-rate">Max Achievable Rate: 1,740 kbps</div>
+                            </div>
+                            <div class="budget-breakdown-list">
+                                <div class="budget-item"><span>Distance / Light-Time:</span> <strong id="rf-dist">384,400 km (~1.28 s)</strong></div>
+                                <div class="budget-item"><span>Lander Transmit Gain:</span> <strong id="rf-tx-gain">30.6 dBi</strong></div>
+                                <div class="budget-item"><span>Effective Radiated Power (EIRP):</span> <strong id="rf-eirp">41.4 dBW</strong></div>
+                                <div class="budget-item"><span>Free-Space Path Loss (FSPL):</span> <strong id="rf-fspl">222.7 dB</strong></div>
+                                <div class="budget-item"><span>DSN Receiver G/T:</span> <strong id="rf-gt">42.0 dB/K</strong></div>
+                                <div class="budget-item"><span>Carrier-to-Noise (C/N0):</span> <strong id="rf-cn0">89.2 dB-Hz</strong></div>
+                                <div class="budget-item"><span>Received Eb/N0:</span> <strong id="rf-ebn0">11.4 dB (Req: 3.0 dB)</strong></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: MCDA LANDING RANKING -->
+            <section id="tab-mcda" class="tab-panel">
+                <div class="panel-header">
+                    <h2>Multi-Criteria Decision Analysis (MCDA) Site Comparison & Ranking</h2>
+                    <span class="header-note">Weighted Sum Model (WSM), TOPSIS Closeness, and Pareto-Optimal Frontier</span>
+                </div>
+
+                <div class="mcda-weights-panel">
+                    <h3>Interactive Criteria Weights & Sensitivity Tuning</h3>
+                    <div class="weights-sliders-grid">
+                        <div class="weight-control">
+                            <label>Sunlight Availability: <span id="w-sun-val">25%</span></label>
+                            <input type="range" id="w-sun" min="0" max="50" value="25" class="slider weight-input">
+                        </div>
+                        <div class="weight-control">
+                            <label>Continuous Sunlight: <span id="w-litsun-val">15%</span></label>
+                            <input type="range" id="w-litsun" min="0" max="50" value="15" class="slider weight-input">
+                        </div>
+                        <div class="weight-control">
+                            <label>Direct Earth LOS: <span id="w-earth-val">20%</span></label>
+                            <input type="range" id="w-earth" min="0" max="50" value="20" class="slider weight-input">
+                        </div>
+                        <div class="weight-control">
+                            <label>Co-Visibility: <span id="w-covis-val">15%</span></label>
+                            <input type="range" id="w-covis" min="0" max="50" value="15" class="slider weight-input">
+                        </div>
+                        <div class="weight-control">
+                            <label>Slope Safety: <span id="w-slope-val">15%</span></label>
+                            <input type="range" id="w-slope" min="0" max="50" value="15" class="slider weight-input">
+                        </div>
+                        <div class="weight-control">
+                            <label>Science / Volatiles: <span id="w-sci-val">10%</span></label>
+                            <input type="range" id="w-sci" min="0" max="50" value="10" class="slider weight-input">
+                        </div>
+                    </div>
+                    <button id="btn-recalculate-mcda" class="btn btn-primary" style="margin-top: 10px;">
+                        🔄 Recalculate Rankings
+                    </button>
+                </div>
+
+                <div class="table-scroll">
+                    <table id="mcda-table" class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Site Name</th>
+                                <th>Region</th>
+                                <th>WSM Score</th>
+                                <th>TOPSIS</th>
+                                <th>Pareto Front</th>
+                                <th>Sunlight</th>
+                                <th>Earth LOS</th>
+                                <th>Slope</th>
+                                <th>Verdict</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mcda-visuals-grid">
+                    <div class="chart-container medium">
+                        <canvas id="chart-mcda-radar"></canvas>
+                    </div>
+                    <div class="chart-container medium">
+                        <canvas id="chart-pareto"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: CANADIAN SPACE AGENCY EXPLORATION -->
+            <section id="tab-csa" class="tab-panel">
+                <div class="panel-header">
+                    <h2>Canadian Space Agency (ASC-CSA) Moon Exploration Program</h2>
+                    <span class="header-note">Official Canadian contributions: Polar Lunar Rover, Canadarm3 on Lunar Gateway, and Volatile Prospecting</span>
+                </div>
+
+                <div class="csa-hero">
+                    <div class="csa-badge">🍁 ASC-CSA Lunar Exploration Accelerator Program (LEAP)</div>
+                    <h3>Canada's Vision for Lunar Exploration</h3>
+                    <p>Canada is an active partner in international lunar exploration. Through the Canadian Space Agency, Canadian industry (Canadensys Aerospace) and universities are developing a micro-rover designed to land at the lunar South Pole, search for water ice in permanently shadowed regions (PSRs), and survive extreme lunar conditions.</p>
+                </div>
+
+                <div class="csa-compliance-card" id="csa-compliance-box">
+                    <h3>Current Site Compliance Assessment for Canadian Rover</h3>
+                    <div class="compliance-grid" id="csa-compliance-grid">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 25px;">🔬 Canadian Science & Navigation Payloads</h3>
+                <div class="payload-cards-grid" id="csa-payloads-container">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <h3 style="margin-top: 25px;">🤖 Canadarm3 on NASA's Lunar Gateway</h3>
+                <div class="gateway-card">
+                    <div class="gateway-title">Canadarm3 Autonomous Space Robotics System</div>
+                    <p>Canadarm3 is Canada's next-generation contribution to NASA's Lunar Gateway space station. Operating from Near Rectilinear Halo Orbit (NRHO), Canadarm3 provides autonomous robotic inspection, maintenance, scientific payload transfers, and satellite communication relay to lunar surface rovers during periods when crater rims occlude direct line-of-sight to Earth.</p>
+                    <div class="gateway-specs">
+                        <span><strong>Orbit:</strong> NRHO (70,000 km South Pole apolune)</span>
+                        <span><strong>Operations:</strong> CSA Mission Control (Saint-Hubert, Quebec)</span>
+                        <span><strong>Surface Relay:</strong> High-elevation polar line-of-sight coverage</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 7: JPL HORIZONS LIVE EPHEMERIS VERIFIER -->
+            <section id="tab-horizons" class="tab-panel">
+                <div class="panel-header">
+                    <h2>NASA JPL Horizons Ephemeris API Verification Suite</h2>
+                    <span class="header-note">Direct cross-check against official NASA JPL DE440/DE441 numerical integration</span>
+                </div>
+
+                <div class="horizons-verifier-card">
+                    <h3>Run Real-Time Verification Query</h3>
+                    <p>This tool directly queries the live NASA JPL Horizons REST API (<code>https://ssd.jpl.nasa.gov/api/horizons.api</code>) for topocentric observer coordinates on the Moon, validating our high-precision IAU analytical ephemeris engine.</p>
+                    
+                    <div class="horizons-form-row">
+                        <div class="form-group">
+                            <label for="hz-target">Target Body</label>
+                            <select id="hz-target" class="control-input">
+                                <option value="SUN" selected>SUN (Target 10)</option>
+                                <option value="EARTH">EARTH (Target 399)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="hz-epoch">Observation Epoch (UTC)</label>
+                            <input type="text" id="hz-epoch" class="control-input" value="2026-12-01T00:00:00Z">
+                        </div>
+                        <div class="form-group" style="align-self: flex-end;">
+                            <button id="btn-hz-query" class="btn btn-primary">
+                                🛰️ Query JPL Horizons API
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="hz-result-box" class="hz-result-box hidden">
+                        <div class="hz-status" id="hz-status">VERIFIED AGAINST JPL HORIZONS</div>
+                        
+                        <div class="hz-comparison-table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Metric</th>
+                                        <th>Internal Analytical Model</th>
+                                        <th>NASA JPL Horizons DE440</th>
+                                        <th>Delta (&Delta;)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Topocentric Elevation</strong></td>
+                                        <td id="hz-internal-el">--</td>
+                                        <td id="hz-remote-el">--</td>
+                                        <td id="hz-delta-el" class="highlight-green">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Topocentric Azimuth</strong></td>
+                                        <td id="hz-internal-az">--</td>
+                                        <td id="hz-remote-az">--</td>
+                                        <td id="hz-delta-az" class="highlight-green">--</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Distance (Range)</strong></td>
+                                        <td id="hz-internal-dist">--</td>
+                                        <td id="hz-remote-dist">--</td>
+                                        <td id="hz-delta-dist" class="highlight-green">--</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="hz-notes" id="hz-notes"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 8: SAVED SITES & SNAPSHOTS (SQLITE) -->
+            <section id="tab-saved-sites" class="tab-panel">
+                <div class="panel-header">
+                    <h2>SQLite Database Persistence: Saved Sites & Assessment History</h2>
+                    <span class="header-note">Stores custom candidate points and timestamped assessment snapshots in data/llsn.sqlite3</span>
+                </div>
+
+                <div class="dynamics-grid">
+                    <div class="panel-section">
+                        <h3>Save New Landing Point to SQLite</h3>
+                        <form id="form-save-site">
+                            <div class="form-group">
+                                <label for="db-site-name">Point Name</label>
+                                <input type="text" id="db-site-name" class="control-input" placeholder="e.g. Malapert Ridge Scout" required>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group half">
+                                    <label for="db-site-lat">Latitude (-90° to +90°)</label>
+                                    <input type="number" id="db-site-lat" step="any" min="-90" max="90" class="control-input" value="-89.5" required>
+                                </div>
+                                <div class="form-group half">
+                                    <label for="db-site-lon">Longitude (-180° to +180°)</label>
+                                    <input type="number" id="db-site-lon" step="any" min="-180" max="180" class="control-input" value="0.0" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary full-width">
+                                💾 Save Site to Database
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="panel-section">
+                        <h3>Database Statistics</h3>
+                        <div class="metric-list">
+                            <div class="metric-item">
+                                <span class="label">Database Storage Engine:</span>
+                                <span class="val">SQLite3 (llsn.sqlite3)</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="label">Total Saved Sites:</span>
+                                <span class="val" id="db-total-sites">--</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="label">Total Assessment Snapshots:</span>
+                                <span class="val" id="db-total-snaps">--</span>
+                            </div>
+                            <div class="metric-item">
+                                <span class="label">Foreign Key Cascades:</span>
+                                <span class="val">PRAGMA foreign_keys = ON</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="touchdown-box" style="margin-top: 16px;">
+                    <h3>Saved Landing Sites & Snapshot Records</h3>
+                    <div class="table-scroll">
+                        <table id="table-saved-sites" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Site Name</th>
+                                    <th>Coordinates</th>
+                                    <th>Created (UTC)</th>
+                                    <th>Snapshots</th>
+                                    <th>Last Assessed</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Application Script -->
+    <script src="app.js"></script>
+</body>
+</html>

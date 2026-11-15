@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lunar-landing-intelligence"
+version = "1.0.0"
+description = "Lunar Landing Site Intelligence Platform integrating LROC QuickMap, NASA Moon Trek, JPL Horizons, and CSA Moon Exploration."
+readme = "README.md"
+authors = [{ name = "Lunar Mission Team" }]
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.28.0",
+    "pydantic>=2.0.0",
+    "requests>=2.31.0",
+    "httpx>=0.27.0",
+    "scipy>=1.12.0",
+    "numpy>=1.26.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
