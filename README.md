@@ -47,20 +47,11 @@ lunar-landing-intelligence/
 
 ## Quick Start
 
-### 1. Run Unit Tests
-```powershell
-python -m pytest C:\Users\tharif\.gemini\antigravity\scratch\lunar-landing-intelligence\tests
-```
+### 1. Launch the Web Application
 
-### 2. Launch the Web Application
-```powershell
-cd C:\Users\tharif\.gemini\antigravity\scratch\lunar-landing-intelligence
-python run_app.py
-```
+https://nasa-lunar.onrender.com/
 Open your browser to:
-**`http://127.0.0.1:8000`**
 
----
 
 ## Features & Capabilities
 
